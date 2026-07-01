@@ -1,3 +1,7 @@
+// Default Supabase Configuration (Paste your keys here for out-of-the-box configuration!)
+const DEFAULT_SUPABASE_URL = '';
+const DEFAULT_SUPABASE_KEY = '';
+
 // State Management
 let state = {
     tasks: [],
@@ -1613,8 +1617,8 @@ async function disconnectSupabase() {
 }
 
 async function initSupabase() {
-    const url = localStorage.getItem('supabase_url');
-    const key = localStorage.getItem('supabase_key');
+    const url = localStorage.getItem('supabase_url') || DEFAULT_SUPABASE_URL;
+    const key = localStorage.getItem('supabase_key') || DEFAULT_SUPABASE_KEY;
     
     if (url && key) {
         try {
