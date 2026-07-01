@@ -1938,27 +1938,116 @@ button {
         height: auto;
         border-right: none;
         border-bottom: 1px solid var(--glass-border);
-        padding: 16px 24px;
+        padding: 12px 20px;
     }
     
     .sidebar-header {
-        margin-bottom: 12px;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .logo-container {
+        gap: 8px;
+    }
+
+    .logo-text {
+        font-size: 19px;
     }
     
+    /* Mobile Bottom Navigation Bar */
     .sidebar-nav {
-        display: none; /* simple hidden nav for mobile workspace simplicity */
+        display: block !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        background: rgba(10, 7, 18, 0.9);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid var(--glass-border);
+        padding: 0 12px;
+        z-index: 99;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar-nav ul {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        height: 100%;
+        margin-bottom: 0;
+    }
+
+    .sidebar-nav li {
+        margin-bottom: 0;
+        flex: 1;
+        display: flex;
+        justify-content: center;
+    }
+
+    .nav-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 6px 0;
+        font-size: 10px;
+        height: 100%;
+        color: var(--text-secondary);
+        width: 100%;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .nav-btn i {
+        width: 20px;
+        height: 20px;
+    }
+
+    .nav-btn.active {
+        color: var(--accent-violet);
+        font-weight: 600;
+        border-bottom: 2px solid var(--accent-violet);
+        border-left: none;
+        padding-left: 16px;
+        padding-right: 16px;
+        border-radius: 0;
+    }
+
+    .nav-section-title,
+    #sidebar-categories {
+        display: none !important;
     }
     
     .sidebar-footer {
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: flex-end;
         align-items: center;
         border-top: none;
         padding-top: 0;
+        gap: 12px;
     }
 
     .theme-toggle-container {
         width: auto;
+    }
+
+    .theme-btn span,
+    .user-info {
+        display: none; /* Keep top bar clean and minimal on mobile */
+    }
+
+    .user-profile {
+        gap: 0;
+    }
+
+    .main-content {
+        padding-bottom: 64px; /* Buffer for bottom nav */
     }
 
     .top-bar {
@@ -1966,6 +2055,10 @@ button {
         flex-direction: column;
         align-items: stretch;
         gap: 16px;
+    }
+
+    .welcome-section h1 {
+        font-size: 22px;
     }
 
     .actions-section {
@@ -1978,17 +2071,25 @@ button {
     }
 
     .view-viewport {
-        padding: 20px;
+        padding: 16px;
+        padding-bottom: 32px;
     }
 
     .tasks-control-bar {
         flex-direction: column;
         align-items: stretch;
+        padding: 16px;
+        gap: 14px;
+    }
+
+    .control-group {
+        flex-wrap: wrap;
     }
 
     .control-group.right-align {
         margin-left: 0;
         flex-wrap: wrap;
+        width: 100%;
     }
 
     .select-wrapper {
@@ -1997,6 +2098,26 @@ button {
     
     .select-wrapper select {
         width: 100%;
+    }
+
+    /* Mobile Bottom-sheet Modal Drawer */
+    .modal-overlay {
+        align-items: flex-end;
+    }
+
+    .modal-container {
+        width: 100%;
+        max-width: 100%;
+        border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+        margin: 0;
+        max-height: 88vh;
+        transform: translateY(100%) scale(1);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 24px;
+    }
+
+    .modal-overlay.active .modal-container {
+        transform: translateY(0) scale(1);
     }
 }
 
