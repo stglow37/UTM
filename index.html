@@ -60,6 +60,12 @@
                             <span>Calendar</span>
                         </button>
                     </li>
+                    <li>
+                        <button class="nav-btn" data-tab="documents">
+                            <i data-lucide="file-text"></i>
+                            <span>Documents</span>
+                        </button>
+                    </li>
                 </ul>
 
                 <div class="nav-section-title">Categories</div>
@@ -319,6 +325,29 @@
                     <!-- Dynamic Calendar View Wrapper -->
                     <div id="calendar-content-area">
                         <!-- Dynamic Month, Week, or Day HTML rendered here -->
+                    </div>
+                </section>
+                
+                <!-- Personal Documents Tab Panel -->
+                <section id="documents-view" class="tab-panel">
+                    <div class="documents-container">
+                        <!-- Left Side List of Documents -->
+                        <div class="docs-sidebar glass-panel" id="docs-sidebar-panel">
+                            <div class="docs-sidebar-header">
+                                <h3>Documents</h3>
+                                <button class="btn-primary" id="btn-create-doc" style="padding: 6px 12px; gap: 4px;" title="Create Document">
+                                    <i data-lucide="plus" style="width:14px; height:14px;"></i> <span>New</span>
+                                </button>
+                            </div>
+                            <div class="docs-list" id="docs-list-container">
+                                <!-- Populated dynamically via app.js -->
+                            </div>
+                        </div>
+
+                        <!-- Right Side Writing Pane -->
+                        <div class="docs-editor-panel glass-panel" id="docs-editor-container">
+                            <!-- Dynamic: Renders empty state or writing editor -->
+                        </div>
                     </div>
                 </section>
 

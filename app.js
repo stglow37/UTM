@@ -11,7 +11,10 @@ let state = {
     calendarDate: new Date(),
     calendarView: 'month',
     supabase: null,
-    useSupabase: false
+    useSupabase: false,
+    documents: [],
+    activeDocumentId: null,
+    docAutosaveTimer: null
 };
 
 // Default Pre-seeded Tasks for initial wow-factor
@@ -285,6 +288,9 @@ function initEventListeners() {
     });
     document.getElementById('supabase-config-form').addEventListener('submit', handleSupabaseConfigSubmit);
     document.getElementById('btn-disconnect-supabase').addEventListener('click', disconnectSupabase);
+
+    // Documents Tab events
+    document.getElementById('btn-create-doc').addEventListener('click', createDocument);
 }
 
 // Tab Swapping Action
@@ -314,6 +320,8 @@ function switchTab(tabName) {
         renderDashboard();
     } else if (tabName === 'calendar') {
         renderCalendar();
+    } else if (tabName === 'documents') {
+        renderDocuments();
     } else {
         renderTaskList();
     }
@@ -1636,6 +1644,7 @@ async function initSupabase() {
     }
     
     await loadTasks();
+    await loadDocuments();
 }
 
 function updateSyncStatusUI(status, label) {
@@ -1645,4 +1654,363 @@ function updateSyncStatusUI(status, label) {
     
     dot.className = `sync-dot ${status}`;
     text.textContent = label;
+}
+
+// ==========================================
+// PERSONAL DOCUMENTS ENGINE LAYER
+// ==========================================
+
+const defaultDocuments = [
+    {
+        id: 'doc-welcome',
+        title: 'Welcome to AetherDocs 📝',
+        content: `Welcome to your personal writing space inside AetherTask!
+
+Here are some helpful tips to get you started:
+
+1. **Auto-Save**: You don't need to manually save your documents. Just start typing, and our debounced auto-saver will save your drafts in the background. Look at the status indicator in the top-right corner to see when updates are complete!
+2. **Offline-First**: Like the task manager, your documents are fully supported locally using your browser's \`localStorage\`.
+3. **Cloud Synchronization**: If you connect AetherTask to your Supabase project, your documents will automatically sync across devices so you can write on your phone or desktop.
+4. **Clean Design**: We designed a distraction-free glassmorphic environment with dynamic line heights for an immersive and premium writing experience.
+
+Feel free to delete this document or click the "New" button on the left panel to start a fresh draft!`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }
+];
+
+async function loadDocuments() {
+    if (state.useSupabase && state.supabase) {
+        try {
+            const { data, error } = await state.supabase
+                .from('documents')
+                .select('*')
+                .order('updated_at', { ascending: false });
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                state.documents = data;
+            } else {
+                await seedDefaultDocuments();
+            }
+        } catch (err) {
+            console.error('Failed to load documents from Supabase:', err);
+            showToast('Failed to load documents from cloud. Using offline mode.', 'warning');
+            loadLocalDocuments();
+        }
+    } else {
+        loadLocalDocuments();
+    }
+}
+
+function loadLocalDocuments() {
+    const local = localStorage.getItem('aetherdocuments');
+    if (local) {
+        state.documents = JSON.parse(local).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    } else {
+        state.documents = [...defaultDocuments];
+        saveLocalDocuments();
+    }
+}
+
+function saveLocalDocuments() {
+    localStorage.setItem('aetherdocuments', JSON.stringify(state.documents));
+}
+
+async function seedDefaultDocuments() {
+    state.documents = [...defaultDocuments];
+    if (state.useSupabase && state.supabase) {
+        try {
+            await state.supabase.from('documents').insert(defaultDocuments);
+        } catch (err) {
+            console.error('Failed to seed default documents in Supabase:', err);
+        }
+    } else {
+        saveLocalDocuments();
+    }
+}
+
+function renderDocuments() {
+    const listContainer = document.getElementById('docs-list-container');
+    const editorContainer = document.getElementById('docs-editor-container');
+    const panelContainer = document.querySelector('.documents-container');
+    
+    if (!listContainer || !editorContainer) return;
+    
+    // 1. Render Left Sidebar List
+    let listHTML = '';
+    if (state.documents.length === 0) {
+        listHTML = `<div class="empty-state" style="padding:20px; font-size:12px; text-align:center;"><p>No documents found.</p></div>`;
+    } else {
+        state.documents.forEach(doc => {
+            const isActive = doc.id === state.activeDocumentId;
+            const updatedDate = new Date(doc.updated_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+            const preview = doc.content ? doc.content.substring(0, 45).replace(/[#*`]/g, '') + (doc.content.length > 45 ? '...' : '') : 'Empty document';
+            
+            listHTML += `
+                <div class="doc-list-item ${isActive ? 'active' : ''}" data-doc-id="${doc.id}">
+                    <div class="doc-item-title">${escapeHTML(doc.title || 'Untitled Document')}</div>
+                    <div class="doc-item-meta">
+                        <span style="font-size:10px; color:var(--text-muted);">${preview}</span>
+                        <span>${updatedDate}</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    listContainer.innerHTML = listHTML;
+    
+    // Attach click listeners to doc list items
+    listContainer.querySelectorAll('.doc-list-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const docId = item.getAttribute('data-doc-id');
+            selectDocument(docId);
+        });
+    });
+    
+    // 2. Render Right Side Editor Pane
+    const activeDoc = state.documents.find(d => d.id === state.activeDocumentId);
+    if (!activeDoc) {
+        // Render Empty State
+        editorContainer.innerHTML = `
+            <div class="docs-empty-state">
+                <i data-lucide="file-text" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+                <p>Select a document or create a new one to start writing.</p>
+                <button class="btn-primary" id="btn-create-doc-empty" style="gap:4px;">
+                    <i data-lucide="plus" style="width:14px; height:14px;"></i> New Document
+                </button>
+            </div>
+        `;
+        
+        // Mobile layout sync: ensure list is shown if no document selected
+        panelContainer.classList.remove('show-editor');
+        
+        const emptyCreateBtn = document.getElementById('btn-create-doc-empty');
+        if (emptyCreateBtn) {
+            emptyCreateBtn.addEventListener('click', createDocument);
+        }
+    } else {
+        // Render Active Editor Workspace
+        editorContainer.innerHTML = `
+            <div class="docs-editor-workspace">
+                <div class="docs-editor-header">
+                    <div class="docs-header-left">
+                        <button class="btn-doc-back" id="btn-doc-close-editor" title="Back to list">
+                            <i data-lucide="chevron-left" style="width: 18px; height: 18px;"></i>
+                        </button>
+                        <input type="text" class="doc-title-input" id="doc-active-title" value="${escapeHTML(activeDoc.title)}" placeholder="Untitled Document" autocomplete="off">
+                    </div>
+                    <div class="docs-header-right">
+                        <div class="autosave-status saved" id="doc-save-status">
+                            <span class="autosave-status-dot"></span>
+                            <span id="doc-save-status-text">Saved</span>
+                        </div>
+                        <button class="btn-card-action delete" id="btn-delete-active-doc" title="Delete Document" style="padding: 8px;">
+                            <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea class="doc-textarea" id="doc-active-textarea" placeholder="Start writing here...">${activeDoc.content || ''}</textarea>
+            </div>
+        `;
+        
+        // Mobile layout sync: slide editor in
+        panelContainer.classList.add('show-editor');
+        
+        // Attach Editor Listeners
+        const titleInput = document.getElementById('doc-active-title');
+        const textarea = document.getElementById('doc-active-textarea');
+        const deleteBtn = document.getElementById('btn-delete-active-doc');
+        const backBtn = document.getElementById('btn-doc-close-editor');
+        
+        titleInput.addEventListener('input', triggerAutosave);
+        textarea.addEventListener('input', triggerAutosave);
+        
+        deleteBtn.addEventListener('click', () => deleteDocument(activeDoc.id));
+        
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                state.activeDocumentId = null;
+                renderDocuments();
+            });
+        }
+    }
+    
+    lucide.createIcons();
+}
+
+function selectDocument(id) {
+    state.activeDocumentId = id;
+    renderDocuments();
+    
+    // Focus textarea if on desktop
+    const textarea = document.getElementById('doc-active-textarea');
+    if (textarea && window.innerWidth > 768) {
+        textarea.focus();
+    }
+}
+
+async function createDocument() {
+    const newDoc = {
+        id: `doc-${Date.now()}`,
+        title: 'Untitled Document',
+        content: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+    
+    // Add to state
+    state.documents.unshift(newDoc);
+    state.activeDocumentId = newDoc.id;
+    
+    // Save to persistence
+    if (state.useSupabase && state.supabase) {
+        try {
+            const { error } = await state.supabase.from('documents').insert([newDoc]);
+            if (error) throw error;
+        } catch (err) {
+            console.error('Supabase doc insert failed:', err);
+            showToast('Saved locally. Server sync failed.', 'warning');
+        }
+    } else {
+        saveLocalDocuments();
+    }
+    
+    renderDocuments();
+    
+    // Focus title input for immediate editing
+    const titleInput = document.getElementById('doc-active-title');
+    if (titleInput) {
+        titleInput.focus();
+        titleInput.select();
+    }
+    showToast('New document created!', 'success');
+}
+
+async function deleteDocument(id) {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    
+    const index = state.documents.findIndex(d => d.id === id);
+    if (index !== -1) {
+        state.documents.splice(index, 1);
+        
+        if (state.activeDocumentId === id) {
+            state.activeDocumentId = null;
+        }
+        
+        if (state.useSupabase && state.supabase) {
+            try {
+                const { error } = await state.supabase.from('documents').delete().eq('id', id);
+                if (error) throw error;
+            } catch (err) {
+                console.error('Supabase doc delete failed:', err);
+                showToast('Failed to delete document from server.', 'warning');
+            }
+        } else {
+            saveLocalDocuments();
+        }
+        
+        renderDocuments();
+        showToast('Document deleted.', 'warning');
+    }
+}
+
+function triggerAutosave() {
+    const statusText = document.getElementById('doc-save-status-text');
+    const statusDot = document.getElementById('doc-save-status');
+    
+    if (statusText && statusDot) {
+        statusDot.className = 'autosave-status saving';
+        statusText.textContent = 'Saving...';
+    }
+    
+    // Clear existing timer
+    if (state.docAutosaveTimer) {
+        clearTimeout(state.docAutosaveTimer);
+    }
+    
+    // Set 600ms debounce timer to save
+    state.docAutosaveTimer = setTimeout(async () => {
+        await saveActiveDocument();
+    }, 600);
+}
+
+async function saveActiveDocument() {
+    if (!state.activeDocumentId) return;
+    
+    const titleVal = document.getElementById('doc-active-title').value.trim();
+    const contentVal = document.getElementById('doc-active-textarea').value;
+    
+    const doc = state.documents.find(d => d.id === state.activeDocumentId);
+    if (doc) {
+        doc.title = titleVal || 'Untitled Document';
+        doc.content = contentVal;
+        doc.updated_at = new Date().toISOString();
+        
+        // Sort documents list by updated_at (active floats to top)
+        state.documents.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        
+        // Save
+        if (state.useSupabase && state.supabase) {
+            try {
+                const { error } = await state.supabase
+                    .from('documents')
+                    .update({ 
+                        title: doc.title, 
+                        content: doc.content, 
+                        updated_at: doc.updated_at 
+                    })
+                    .eq('id', doc.id);
+                if (error) throw error;
+            } catch (err) {
+                console.error('Supabase autosave error:', err);
+            }
+        } else {
+            saveLocalDocuments();
+        }
+        
+        // Update UI status to Saved
+        const statusText = document.getElementById('doc-save-status-text');
+        const statusDot = document.getElementById('doc-save-status');
+        if (statusText && statusDot) {
+            statusDot.className = 'autosave-status saved';
+            statusText.textContent = 'Saved';
+        }
+        
+        // Re-render sidebar list to show updated title and dates (without rebuilding editor container)
+        const listContainer = document.getElementById('docs-list-container');
+        if (listContainer) {
+            let listHTML = '';
+            state.documents.forEach(d => {
+                const isActive = d.id === state.activeDocumentId;
+                const updatedDate = new Date(d.updated_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                });
+                const preview = d.content ? d.content.substring(0, 45).replace(/[#*`]/g, '') + (d.content.length > 45 ? '...' : '') : 'Empty document';
+                
+                listHTML += `
+                    <div class="doc-list-item ${isActive ? 'active' : ''}" data-doc-id="${d.id}">
+                        <div class="doc-item-title">${escapeHTML(d.title || 'Untitled Document')}</div>
+                        <div class="doc-item-meta">
+                            <span style="font-size:10px; color:var(--text-muted);">${preview}</span>
+                            <span>${updatedDate}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            listContainer.innerHTML = listHTML;
+            
+            // Re-attach list clickers
+            listContainer.querySelectorAll('.doc-list-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const docId = item.getAttribute('data-doc-id');
+                    selectDocument(docId);
+                });
+            });
+        }
+    }
 }

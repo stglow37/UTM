@@ -2134,3 +2134,279 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   PERSONAL DOCUMENTS VIEW STYLING
+   ========================================== */
+.documents-container {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+    height: calc(100vh - 120px);
+    position: relative;
+}
+
+.docs-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.docs-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 16px;
+}
+
+.docs-sidebar-header h3 {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.docs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* Document Item Layout */
+.doc-list-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: var(--border-radius-sm);
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--glass-border);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+
+.doc-list-item:hover {
+    background: var(--glass-bg);
+    border-color: var(--glass-border-focus);
+}
+
+.doc-list-item.active {
+    background: var(--accent-violet-glow);
+    border-color: var(--accent-violet);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.1);
+}
+
+.doc-list-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent-violet);
+}
+
+.doc-item-title {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doc-item-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Right Side Editor pane */
+.docs-editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 24px;
+    overflow: hidden;
+}
+
+.docs-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.docs-empty-state p {
+    font-size: 14px;
+    margin-bottom: 20px;
+    max-width: 300px;
+    line-height: 1.4;
+}
+
+.docs-editor-workspace {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 16px;
+}
+
+.docs-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.docs-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-grow: 1;
+}
+
+.btn-doc-back {
+    display: none; /* Only visible on mobile */
+    padding: 6px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.btn-doc-back:hover {
+    background: var(--glass-border);
+}
+
+.docs-header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* Auto-save statuses */
+.autosave-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.autosave-status.saving {
+    color: var(--accent-amber);
+}
+
+.autosave-status.saved {
+    color: var(--accent-teal);
+    text-shadow: 0 0 8px rgba(20, 184, 166, 0.2);
+}
+
+.autosave-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.autosave-status.saving .autosave-status-dot {
+    background: var(--accent-amber);
+    box-shadow: 0 0 6px var(--accent-amber);
+    animation: pulse-amber-glow 1.5s infinite;
+}
+
+.autosave-status.saved .autosave-status-dot {
+    background: var(--accent-teal);
+    box-shadow: 0 0 6px var(--accent-teal);
+}
+
+@keyframes pulse-amber-glow {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+/* Inputs for text editor */
+.doc-title-input {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    padding: 4px 0;
+    border-bottom: 1px solid transparent;
+    transition: var(--transition-fast);
+}
+
+.doc-title-input:focus {
+    border-bottom-color: var(--glass-border-focus);
+}
+
+.doc-textarea {
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* Mobile Responsiveness for Documents Tab */
+@media (max-width: 768px) {
+    .documents-container {
+        grid-template-columns: 1fr;
+        height: calc(100vh - 160px);
+    }
+
+    /* Toggle list and editor on mobile dynamically */
+    .documents-container .docs-sidebar {
+        display: flex;
+    }
+
+    .documents-container .docs-editor-panel {
+        display: none;
+    }
+
+    /* When editor is active, show only editor and hide list */
+    .documents-container.show-editor .docs-sidebar {
+        display: none !important;
+    }
+
+    .documents-container.show-editor .docs-editor-panel {
+        display: flex !important;
+        padding: 16px;
+    }
+
+    .btn-doc-back {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .doc-title-input {
+        font-size: 18px;
+    }
+}
