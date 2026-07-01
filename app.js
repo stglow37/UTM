@@ -18,7 +18,8 @@ let state = {
     useSupabase: false,
     documents: [],
     activeDocumentId: null,
-    docAutosaveTimer: null
+    docAutosaveTimer: null,
+    userId: null
 };
 
 // Default Pre-seeded Tasks for initial wow-factor
@@ -149,9 +150,10 @@ async function loadTasks() {
                 state.tasks = data;
             } else {
                 // Seed database if empty
-                const { error: seedError } = await state.supabase.from('tasks').insert(defaultTasks);
+                const seeded = defaultTasks.map(t => ({ ...t, user_id: getUserId() }));
+                const { error: seedError } = await state.supabase.from('tasks').insert(seeded);
                 if (seedError) throw seedError;
-                state.tasks = [...defaultTasks];
+                state.tasks = [...seeded];
             }
         } catch (err) {
             console.error('Failed to load tasks from Supabase:', err);
@@ -295,6 +297,9 @@ function initEventListeners() {
 
     // Documents Tab events
     document.getElementById('btn-create-doc').addEventListener('click', createDocument);
+
+    // Auth Login form
+    document.getElementById('auth-login-form').addEventListener('submit', handleLogin);
 }
 
 // Tab Swapping Action
@@ -1110,7 +1115,8 @@ async function handleTaskFormSubmit(e) {
             priority,
             tags,
             completed: false,
-            subtasks: newSubtasks
+            subtasks: newSubtasks,
+            user_id: getUserId()
         };
         state.tasks.push(newTask);
         saveTasks();
@@ -1153,7 +1159,8 @@ async function handleQuickAddSubmit(e) {
         priority,
         tags: [],
         completed: false,
-        subtasks: []
+        subtasks: [],
+        user_id: getUserId()
     };
 
     state.tasks.push(newTask);
@@ -1627,23 +1634,37 @@ async function initSupabase() {
             // Initialize Supabase Client
             state.supabase = supabase.createClient(url, key);
             
-            // Test connection by fetching a single row
-            const { data, error } = await state.supabase.from('tasks').select('id').limit(1);
-            if (error) throw error;
+            // Check for existing auth session
+            const { data: { session } } = await state.supabase.auth.getSession();
             
-            state.useSupabase = true;
-            updateSyncStatusUI('connection-online', 'Sync: Online');
-            showToast('Connected to Supabase!', 'success');
+            if (session) {
+                // User is already logged in — hide auth screen
+                state.userId = session.user.id;
+                document.getElementById('auth-screen').classList.add('hidden');
+                
+                state.useSupabase = true;
+                updateSyncStatusUI('connection-online', 'Sync: Online');
+            } else {
+                // No session — show login screen and wait
+                document.getElementById('auth-screen').classList.remove('hidden');
+                updateSyncStatusUI('connection-offline', 'Not signed in');
+                // Don't load data yet — wait for login
+                return;
+            }
         } catch (err) {
             console.error('Supabase initialization failed:', err);
             state.useSupabase = false;
             state.supabase = null;
             updateSyncStatusUI('connection-error', 'Sync Error');
             showToast('Failed to connect to Supabase database.', 'warning');
+            // Hide auth screen and fall back to local
+            document.getElementById('auth-screen').classList.add('hidden');
         }
     } else {
         state.useSupabase = false;
         state.supabase = null;
+        // No Supabase configured — skip auth entirely, use local mode
+        document.getElementById('auth-screen').classList.add('hidden');
         updateSyncStatusUI('connection-offline', 'Sync: Local');
     }
     
@@ -1668,6 +1689,53 @@ function escapeHTML(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+// ==========================================
+// AUTH HANDLERS
+// ==========================================
+
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errorMsg = document.getElementById('auth-error-msg');
+    const btnText = document.getElementById('auth-btn-text');
+    
+    errorMsg.style.display = 'none';
+    btnText.textContent = 'Signing in...';
+    
+    try {
+        const { data, error } = await state.supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+        
+        if (error) throw error;
+        
+        state.userId = data.user.id;
+        state.useSupabase = true;
+        
+        document.getElementById('auth-screen').classList.add('hidden');
+        updateSyncStatusUI('connection-online', 'Sync: Online');
+        
+        await loadTasks();
+        await loadDocuments();
+        render();
+        lucide.createIcons();
+        showToast('Signed in successfully!', 'success');
+    } catch (err) {
+        console.error('Login failed:', err);
+        errorMsg.textContent = err.message || 'Invalid email or password.';
+        errorMsg.style.display = 'block';
+    } finally {
+        btnText.textContent = 'Sign In';
+    }
+}
+
+function getUserId() {
+    return state.userId || null;
 }
 
 // ==========================================
@@ -1735,7 +1803,9 @@ async function seedDefaultDocuments() {
     state.documents = [...defaultDocuments];
     if (state.useSupabase && state.supabase) {
         try {
-            await state.supabase.from('documents').insert(defaultDocuments);
+            const seeded = defaultDocuments.map(d => ({ ...d, user_id: getUserId() }));
+            await state.supabase.from('documents').insert(seeded);
+            state.documents = [...seeded];
         } catch (err) {
             console.error('Failed to seed default documents in Supabase:', err);
         }
@@ -1873,7 +1943,8 @@ async function createDocument() {
         title: 'Untitled Document',
         content: '',
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        user_id: getUserId()
     };
     
     // Add to state
