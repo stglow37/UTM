@@ -1,6 +1,6 @@
 // Default Supabase Configuration (Paste your keys here for out-of-the-box configuration!)
-const DEFAULT_SUPABASE_URL = '';
-const DEFAULT_SUPABASE_KEY = '';
+const DEFAULT_SUPABASE_URL = 'https://ernjkqamkjlatjodfjdg.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybmprcWFta2psYXRqb2RmamRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4ODAxNTQsImV4cCI6MjA5ODQ1NjE1NH0.ropQKVC_T5CSpaeLipHCRNzAYUrzEP14Wktb02q0yiw';
 
 // State Management
 let state = {
