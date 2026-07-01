@@ -2119,11 +2119,101 @@ button {
     .modal-overlay.active .modal-container {
         transform: translateY(0) scale(1);
     }
+
+    /* Mobile Calendar Layout Refinements */
+    .calendar-grid {
+        gap: 4px !important;
+    }
+
+    .calendar-day-header {
+        font-size: 11px !important;
+        padding: 4px 0 !important;
+    }
+
+    .calendar-day-cell {
+        min-height: 54px !important;
+        padding: 4px !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .calendar-day-number {
+        font-size: 11px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .calendar-task-pills {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 3px;
+        justify-content: flex-start;
+        align-items: center;
+        margin-top: 2px;
+        max-height: none !important;
+        overflow: hidden;
+    }
+
+    .calendar-task-pill {
+        padding: 0 !important;
+        width: 6px !important;
+        height: 6px !important;
+        min-height: auto !important;
+        border-radius: 50% !important;
+        border: none !important;
+        margin: 0 !important;
+        box-shadow: 0 0 4px currentColor;
+    }
+
+    .calendar-task-pill span {
+        display: none !important; /* Hide priority dot and title text inside pills */
+    }
+
+    .calendar-task-pill.High {
+        background-color: var(--accent-rose) !important;
+        color: var(--accent-rose) !important;
+    }
+    .calendar-task-pill.Medium {
+        background-color: var(--accent-amber) !important;
+        color: var(--accent-amber) !important;
+    }
+    .calendar-task-pill.Low {
+        background-color: var(--accent-teal) !important;
+        color: var(--accent-teal) !important;
+    }
+
+    .calendar-add-task-btn {
+        display: none !important; /* Hide cell hover "+" buttons on mobile to avoid misclicks */
+    }
+
+    /* Mobile Weekly View Stack */
+    .calendar-weekly-view {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .calendar-weekly-col {
+        min-height: auto !important;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 16px;
+    }
+
+    /* Mobile Daily Split view Stack */
+    .calendar-daily-view {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+    
+    .calendar-daily-sidebar {
+        height: auto !important;
+    }
 }
 
 @media (max-width: 480px) {
     .metrics-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
     }
     
     .form-row {
