@@ -560,6 +560,12 @@ button {
     height: 18px;
 }
 
+.theme-btn.active {
+    color: var(--accent-teal);
+    border-color: var(--accent-teal);
+    background: rgba(45, 212, 191, 0.1);
+}
+
 .dark-theme .theme-btn .sun-icon { display: block; }
 .dark-theme .theme-btn .moon-icon { display: none; }
 .light-theme .theme-btn .sun-icon { display: none; }

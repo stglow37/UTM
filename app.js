@@ -193,6 +193,9 @@ function initEventListeners() {
     // Theme Toggle
     document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
 
+    // Push Notification Toggle
+    document.getElementById('btn-toggle-notifications').addEventListener('click', togglePushNotifications);
+
     // Create Task Modal Trigger Buttons
     document.getElementById('btn-create-task').addEventListener('click', () => openTaskModal());
     document.getElementById('btn-empty-create').addEventListener('click', () => openTaskModal());
@@ -1069,7 +1072,12 @@ async function handleTaskFormSubmit(e) {
                 tags,
                 subtasks: newSubtasks
             };
-            
+
+            // Due date changed - allow the reminder to fire again for the new date
+            if (state.tasks[taskIndex].dueDate !== dueDate) {
+                updatedFields.reminder_sent_at = null;
+            }
+
             state.tasks[taskIndex] = {
                 ...state.tasks[taskIndex],
                 ...updatedFields
@@ -1670,6 +1678,7 @@ async function initSupabase() {
     
     await loadTasks();
     await loadDocuments();
+    await initPushToggleUI();
 }
 
 function updateSyncStatusUI(status, label) {
@@ -1722,6 +1731,7 @@ async function handleLogin(e) {
         
         await loadTasks();
         await loadDocuments();
+        await initPushToggleUI();
         render();
         lucide.createIcons();
         showToast('Signed in successfully!', 'success');
@@ -1736,6 +1746,109 @@ async function handleLogin(e) {
 
 function getUserId() {
     return state.userId || null;
+}
+
+// ==========================================
+// PUSH NOTIFICATIONS LAYER
+// ==========================================
+const VAPID_PUBLIC_KEY = 'BHIRvirA4zx7sPJQX5z7OlBoMdTvq6eJqXT2OFsP5R8kpCAclnHPRCc5V4f1MNc0mso1mJAe3z-m7tydJ6GW1FM';
+
+// Converts the URL-safe base64 VAPID key into the Uint8Array format required by PushManager
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+async function getPushSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+    const registration = await navigator.serviceWorker.ready;
+    return registration.pushManager.getSubscription();
+}
+
+// Reflects current subscription state in the sidebar toggle button
+async function initPushToggleUI() {
+    const btn = document.getElementById('btn-toggle-notifications');
+    if (!btn) return;
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Notifications Unsupported';
+        return;
+    }
+
+    const subscription = await getPushSubscription();
+    updatePushToggleUI(!!subscription);
+}
+
+function updatePushToggleUI(isSubscribed) {
+    const btn = document.getElementById('btn-toggle-notifications');
+    if (!btn) return;
+    btn.classList.toggle('active', isSubscribed);
+    btn.querySelector('span').textContent = isSubscribed ? 'Notifications On' : 'Enable Notifications';
+}
+
+async function togglePushNotifications() {
+    if (!state.useSupabase || !state.userId) {
+        showToast('Sign in with cloud sync to enable notifications.', 'warning');
+        return;
+    }
+
+    const existing = await getPushSubscription();
+    if (existing) {
+        await unsubscribeFromPush(existing);
+    } else {
+        await subscribeToPush();
+    }
+}
+
+async function subscribeToPush() {
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            showToast('Notification permission was not granted.', 'warning');
+            return;
+        }
+
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+
+        const p256dh = btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh'))));
+        const auth = btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth'))));
+
+        const { error } = await state.supabase.from('push_subscriptions').upsert({
+            user_id: state.userId,
+            endpoint: subscription.endpoint,
+            p256dh,
+            auth
+        }, { onConflict: 'endpoint' });
+
+        if (error) throw error;
+
+        updatePushToggleUI(true);
+        showToast('Task reminders enabled on this device.', 'success');
+    } catch (err) {
+        console.error('Push subscription failed:', err);
+        showToast('Failed to enable notifications on this device.', 'warning');
+    }
+}
+
+async function unsubscribeFromPush(subscription) {
+    try {
+        if (state.supabase) {
+            await state.supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+        }
+        await subscription.unsubscribe();
+        updatePushToggleUI(false);
+        showToast('Task reminders disabled on this device.', 'success');
+    } catch (err) {
+        console.error('Push unsubscribe failed:', err);
+        showToast('Failed to disable notifications.', 'warning');
+    }
 }
 
 // ==========================================
