@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PWA Config -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#120e24">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <title>AetherTask // Ultimate Task Manager</title>
+    <!-- Outfit & Inter Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase JS Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Main Style -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dark-theme">
+    <!-- Decorative background glow elements -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo-icon">
+                        <i data-lucide="compass" class="glow-icon"></i>
+                    </div>
+                    <span class="logo-text">AetherTask</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <button class="nav-btn active" data-tab="dashboard">
+                            <i data-lucide="layout-dashboard"></i>
+                            <span>Dashboard</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="tasks">
+                            <i data-lucide="check-square"></i>
+                            <span>All Tasks</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="calendar">
+                            <i data-lucide="calendar"></i>
+                            <span>Calendar</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="nav-section-title">Categories</div>
+                <ul id="sidebar-categories">
+                    <!-- Categories will be generated dynamically -->
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sync-status-container">
+                    <span class="sync-dot connection-offline" id="sync-status-dot"></span>
+                    <span class="sync-label" id="sync-status-text">Sync: Local Only</span>
+                    <button class="btn-text-small" id="btn-configure-sync" title="Configure Database Sync">Settings</button>
+                </div>
+                <div class="theme-toggle-container">
+                    <button id="theme-toggle-btn" class="theme-btn" title="Toggle Light/Dark Theme">
+                        <i data-lucide="sun" class="sun-icon"></i>
+                        <i data-lucide="moon" class="moon-icon"></i>
+                        <span>Theme Toggle</span>
+                    </button>
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">Task Master</div>
+                        <div class="user-role">Productive Hero</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Header / Top Bar -->
+            <header class="top-bar">
+                <div class="welcome-section">
+                    <h1 id="greeting">Hello, Master</h1>
+                    <p id="current-date">Wednesday, July 1</p>
+                </div>
+                
+                <div class="actions-section">
+                    <div class="search-wrapper">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="global-search" placeholder="Search tasks, tags...">
+                    </div>
+                    <button class="btn-primary" id="btn-create-task">
+                        <i data-lucide="plus"></i>
+                        <span>New Task</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable View Area -->
+            <div class="view-viewport">
+                
+                <!-- Dashboard View -->
+                <section id="dashboard-view" class="tab-panel active">
+                    <!-- Metric Cards -->
+                    <div class="metrics-grid">
+                        <div class="metric-card glass-panel" data-filter="all">
+                            <div class="metric-icon total">
+                                <i data-lucide="clipboard-list"></i>
+                            </div>
+                            <div class="metric-info">
+                                <div class="metric-value" id="stat-total">0</div>
+                                <div class="metric-label">Total Tasks</div>
+                            </div>
+                        </div>
+                        <div class="metric-card glass-panel" data-filter="pending">
+                            <div class="metric-icon pending">
+                                <i data-lucide="clock"></i>
+                            </div>
+                            <div class="metric-info">
+                                <div class="metric-value" id="stat-pending">0</div>
+                                <div class="metric-label">Pending</div>
+                            </div>
+                        </div>
+                        <div class="metric-card glass-panel" data-filter="completed">
+                            <div class="metric-icon completed">
+                                <i data-lucide="check-circle2"></i>
+                            </div>
+                            <div class="metric-info">
+                                <div class="metric-value" id="stat-completed">0</div>
+                                <div class="metric-label">Completed</div>
+                            </div>
+                        </div>
+                        <div class="metric-card glass-panel" data-filter="overdue">
+                            <div class="metric-icon overdue">
+                                <i data-lucide="alert-circle"></i>
+                            </div>
+                            <div class="metric-info">
+                                <div class="metric-value" id="stat-overdue">0</div>
+                                <div class="metric-label">Overdue</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Grid -->
+                    <div class="analytics-grid">
+                        <!-- Progress Ring Card -->
+                        <div class="analytics-card glass-panel completion-rate-card">
+                            <h3>Completion Rate</h3>
+                            <div class="progress-ring-container">
+                                <svg class="progress-ring" width="160" height="160">
+                                    <circle class="progress-ring-circle-bg" stroke="rgba(255,255,255,0.05)" stroke-width="12" fill="transparent" r="68" cx="80" cy="80"/>
+                                    <circle class="progress-ring-circle" id="dashboard-progress-ring" stroke="url(#progress-gradient)" stroke-width="12" stroke-linecap="round" fill="transparent" r="68" cx="80" cy="80" stroke-dasharray="427.2" stroke-dashoffset="427.2"/>
+                                    <!-- Gradient definition -->
+                                    <defs>
+                                        <linearGradient id="progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#14b8a6" />
+                                            <stop offset="100%" stop-color="#a855f7" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div class="progress-percentage-label">
+                                    <span id="completion-percentage">0%</span>
+                                    <span class="subtext">Finished</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category Distribution -->
+                        <div class="analytics-card glass-panel">
+                            <h3>Task Categories</h3>
+                            <div class="category-distribution" id="category-distribution-list">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lower Dashboard: Quick Add & Recent Tasks -->
+                    <div class="dashboard-details-grid">
+                        <!-- Quick Add -->
+                        <div class="dashboard-col glass-panel">
+                            <h3>Quick Add Task</h3>
+                            <form id="quick-add-form" class="quick-add-form">
+                                <div class="input-group">
+                                    <input type="text" id="quick-add-title" placeholder="What needs to be done?" required autocomplete="off">
+                                    <button type="submit" class="btn-icon" title="Add task">
+                                        <i data-lucide="plus"></i>
+                                    </button>
+                                </div>
+                                <div class="quick-add-meta">
+                                    <select id="quick-add-category">
+                                        <option value="Work">💼 Work</option>
+                                        <option value="Personal">🏠 Personal</option>
+                                        <option value="Shopping">🛒 Shopping</option>
+                                        <option value="Wellness">🌱 Wellness</option>
+                                    </select>
+                                    <select id="quick-add-priority">
+                                        <option value="Low">🟢 Low Priority</option>
+                                        <option value="Medium" selected>🟡 Medium Priority</option>
+                                        <option value="High">🔴 High Priority</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Recent Tasks -->
+                        <div class="dashboard-col glass-panel">
+                            <div class="col-header">
+                                <h3>Upcoming & Urgent</h3>
+                                <button class="btn-text" id="btn-view-all-tasks">View All <i data-lucide="chevron-right"></i></button>
+                            </div>
+                            <div class="recent-tasks-list" id="urgent-tasks-list">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tasks View -->
+                <section id="tasks-view" class="tab-panel">
+                    <!-- Filters and Controls Bar -->
+                    <div class="tasks-control-bar glass-panel">
+                        <div class="control-group">
+                            <span class="control-label"><i data-lucide="filter"></i> Filters:</span>
+                            <div class="filter-buttons">
+                                <button class="filter-btn active" data-status-filter="all">All</button>
+                                <button class="filter-btn" data-status-filter="active">Active</button>
+                                <button class="filter-btn" data-status-filter="completed">Completed</button>
+                                <button class="filter-btn" data-status-filter="overdue">Overdue</button>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group right-align">
+                            <div class="select-wrapper">
+                                <label for="category-select">Category:</label>
+                                <select id="category-select">
+                                    <option value="all">All Categories</option>
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+
+                            <div class="select-wrapper">
+                                <label for="priority-select">Priority:</label>
+                                <select id="priority-select">
+                                    <option value="all">All Priorities</option>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                            </div>
+
+                            <div class="select-wrapper">
+                                <label for="sort-select">Sort By:</label>
+                                <select id="sort-select">
+                                    <option value="due-date">Due Date</option>
+                                    <option value="priority-desc">Priority (High-Low)</option>
+                                    <option value="priority-asc">Priority (Low-High)</option>
+                                    <option value="title">Title (A-Z)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tasks Grid / Container -->
+                    <div class="tasks-grid-container" id="tasks-grid">
+                        <!-- Tasks Cards Generated Dynamically -->
+                    </div>
+
+                    <div class="empty-state" id="tasks-empty-state">
+                        <div class="empty-icon">
+                            <i data-lucide="check-square"></i>
+                        </div>
+                        <h3>No tasks found</h3>
+                        <p>Refine your filters, search term, or create a brand new task to get started.</p>
+                        <button class="btn-primary" id="btn-empty-create">
+                            <i data-lucide="plus"></i>
+                            <span>Create Task</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Calendar View -->
+                <section id="calendar-view" class="tab-panel">
+                    <!-- Calendar Header Bar -->
+                    <div class="calendar-control-bar glass-panel">
+                        <div class="calendar-nav-controls">
+                            <button class="btn-icon" id="btn-calendar-prev" title="Previous">
+                                <i data-lucide="chevron-left"></i>
+                            </button>
+                            <button class="btn-secondary" id="btn-calendar-today">Today</button>
+                            <button class="btn-icon" id="btn-calendar-next" title="Next">
+                                <i data-lucide="chevron-right"></i>
+                            </button>
+                            <h2 id="calendar-view-title" class="calendar-title">July 2026</h2>
+                        </div>
+                        
+                        <div class="calendar-view-toggles">
+                            <button class="filter-btn active" data-calendar-view="month">Month</button>
+                            <button class="filter-btn" data-calendar-view="week">Week</button>
+                            <button class="filter-btn" data-calendar-view="day">Day</button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Calendar View Wrapper -->
+                    <div id="calendar-content-area">
+                        <!-- Dynamic Month, Week, or Day HTML rendered here -->
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Create/Edit Task Glass Modal -->
+    <div class="modal-overlay" id="task-modal">
+        <div class="modal-container glass-panel">
+            <div class="modal-header">
+                <h2 id="modal-title">Create New Task</h2>
+                <button class="btn-close" id="btn-close-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <form id="task-form">
+                <input type="hidden" id="task-id">
+                
+                <div class="form-group">
+                    <label for="task-title">Task Title</label>
+                    <input type="text" id="task-title" placeholder="e.g. Design app homepage" required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="task-desc">Description</label>
+                    <textarea id="task-desc" rows="3" placeholder="Add some details about this task..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-category-select">Category</label>
+                        <select id="task-category-select">
+                            <option value="Work">💼 Work</option>
+                            <option value="Personal">🏠 Personal</option>
+                            <option value="Shopping">🛒 Shopping</option>
+                            <option value="Wellness">🌱 Wellness</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="task-due-date">Due Date</label>
+                        <input type="date" id="task-due-date">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Priority</label>
+                    <div class="priority-selector-grid">
+                        <label class="priority-option low">
+                            <input type="radio" name="priority" value="Low">
+                            <span class="priority-label"><i data-lucide="circle" class="dot low"></i> Low</span>
+                        </label>
+                        <label class="priority-option medium">
+                            <input type="radio" name="priority" value="Medium" checked>
+                            <span class="priority-label"><i data-lucide="circle" class="dot medium"></i> Medium</span>
+                        </label>
+                        <label class="priority-option high">
+                            <input type="radio" name="priority" value="High">
+                            <span class="priority-label"><i data-lucide="circle" class="dot high"></i> High</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-tags">Tags <span class="label-subtext">(comma separated)</span></label>
+                    <input type="text" id="task-tags" placeholder="design, frontend, launch" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <div class="checklist-section-header">
+                        <label>Subtask Checklist</label>
+                        <button type="button" class="btn-text-small" id="btn-add-subtask-input">
+                            <i data-lucide="plus"></i> Add Item
+                        </button>
+                    </div>
+                    <div class="subtask-inputs-list" id="modal-subtask-list">
+                        <!-- Subtask input fields will be appended here -->
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="btn-cancel-modal">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btn-submit-task">
+                        <span id="submit-btn-text">Save Task</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration Glass Modal -->
+    <div class="modal-overlay" id="supabase-modal">
+        <div class="modal-container glass-panel" style="max-width: 460px;">
+            <div class="modal-header">
+                <h2>Connect to Supabase</h2>
+                <button class="btn-close" id="btn-close-supabase-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <p style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4;">
+                Connect AetherTask to your Supabase project to store your tasks online and sync them to your phone.
+            </p>
+
+            <form id="supabase-config-form">
+                <div class="form-group">
+                    <label for="sb-url">Supabase Project URL</label>
+                    <input type="text" id="sb-url" placeholder="https://your-project.supabase.co" required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="sb-key">Supabase Anon Public API Key</label>
+                    <input type="text" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required autocomplete="off">
+                </div>
+
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.4;">
+                    <i data-lucide="info" style="width: 12px; height: 12px; display: inline; vertical-align: middle; margin-right: 4px;"></i>
+                    You can find these under **Settings** &rarr; **API** in your Supabase dashboard. RLS policies must allow access to the <code>tasks</code> table.
+                </div>
+
+                <div class="modal-footer" style="margin-top: 0; padding-top: 16px;">
+                    <button type="button" class="btn-secondary" id="btn-disconnect-supabase">Disconnect</button>
+                    <button type="submit" class="btn-primary">
+                        <span>Save & Connect</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Floating Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>

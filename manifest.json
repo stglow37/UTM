@@ -1,0 +1,22 @@
+{
+  "name": "AetherTask Ultimate Task Manager",
+  "short_name": "AetherTask",
+  "description": "Elegant, glassmorphic task manager with real-time online syncing.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0712",
+  "theme_color": "#120e24",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
