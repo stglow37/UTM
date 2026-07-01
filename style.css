@@ -1,12 +1,12 @@
 /* Design System & Custom Properties */
 :root {
-    --bg-primary: #0a0712;
-    --bg-secondary: #120e24;
-    --bg-tertiary: #1b1633;
+    --bg-primary: #07040f;
+    --bg-secondary: #0f0a1f;
+    --bg-tertiary: #160f2d;
     
-    --text-primary: #f3f1f8;
-    --text-secondary: #9f9cb2;
-    --text-muted: #625f75;
+    --text-primary: #f5f4f8;
+    --text-secondary: #a7a2bf;
+    --text-muted: #6e6a8d;
     
     --accent-violet: #a855f7;
     --accent-teal: #14b8a6;
@@ -18,10 +18,10 @@
     --accent-amber-glow: rgba(245, 158, 11, 0.15);
     --accent-rose-glow: rgba(244, 63, 94, 0.15);
     
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.06);
-    --glass-border-focus: rgba(168, 85, 247, 0.4);
-    --glass-shadow: rgba(0, 0, 0, 0.4);
+    --glass-bg: rgba(255, 255, 255, 0.035);
+    --glass-border: rgba(255, 255, 255, 0.065);
+    --glass-border-focus: rgba(168, 85, 247, 0.45);
+    --glass-shadow: rgba(0, 0, 0, 0.5);
     
     --sidebar-width: 260px;
     --border-radius-sm: 8px;
@@ -33,30 +33,30 @@
     --transition-fast: all 0.15s ease;
 }
 
-/* Light Theme Variables */
+/* Light Theme Variables (Frosted Milky Glass Edition) */
 .light-theme {
-    --bg-primary: #f6f5fa;
+    --bg-primary: #f7f6fc;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #f0edf7;
+    --bg-tertiary: #eff1f9;
     
-    --text-primary: #120e24;
-    --text-secondary: #585568;
-    --text-muted: #8e8b9e;
+    --text-primary: #0f0a21;
+    --text-secondary: #585370;
+    --text-muted: #9b96b7;
     
-    --accent-violet: #8b5cf6;
-    --accent-teal: #0d9488;
-    --accent-amber: #d97706;
-    --accent-rose: #e11d48;
+    --accent-violet: #6d28d9;
+    --accent-teal: #0f766e;
+    --accent-amber: #b45309;
+    --accent-rose: #be123c;
     
-    --accent-violet-glow: rgba(139, 92, 246, 0.1);
-    --accent-teal-glow: rgba(13, 148, 136, 0.1);
-    --accent-amber-glow: rgba(217, 119, 6, 0.1);
-    --accent-rose-glow: rgba(225, 29, 72, 0.1);
+    --accent-violet-glow: rgba(109, 40, 217, 0.08);
+    --accent-teal-glow: rgba(15, 118, 110, 0.08);
+    --accent-amber-glow: rgba(180, 83, 9, 0.08);
+    --accent-rose-glow: rgba(190, 18, 60, 0.08);
     
-    --glass-bg: rgba(0, 0, 0, 0.02);
-    --glass-border: rgba(0, 0, 0, 0.08);
-    --glass-border-focus: rgba(139, 92, 246, 0.5);
-    --glass-shadow: rgba(0, 0, 0, 0.05);
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.7);
+    --glass-border-focus: rgba(109, 40, 217, 0.4);
+    --glass-shadow: rgba(24, 21, 40, 0.03);
 }
 
 /* Global Reset & Base Styling */
