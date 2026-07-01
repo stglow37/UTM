@@ -443,7 +443,7 @@ function renderDashboard() {
         catItem.className = 'cat-dist-item';
         catItem.innerHTML = `
             <div class="cat-dist-header">
-                <span class="cat-dist-name">${cat}</span>
+                <span class="cat-dist-name">${escapeHTML(cat)}</span>
                 <span class="cat-dist-stat">${catCompleted}/${catTotal} (${catPercentage}%)</span>
             </div>
             <div class="progress-track">
@@ -492,10 +492,10 @@ function renderDashboard() {
                     <button class="checkbox-custom-btn" data-toggle-id="${task.id}" title="Complete Task">
                         <i data-lucide="check"></i>
                     </button>
-                    <span class="recent-task-title" title="${task.title}">${task.title}</span>
+                    <span class="recent-task-title" title="${escapeHTML(task.title)}">${escapeHTML(task.title)}</span>
                 </div>
                 <div class="recent-task-right">
-                    <span class="priority-dot ${task.priority}" title="${task.priority} Priority"></span>
+                    <span class="priority-dot ${escapeHTML(task.priority)}" title="${escapeHTML(task.priority)} Priority"></span>
                     <span class="due-pill ${isOverdue ? 'overdue' : ''}">${dueText}</span>
                 </div>
             `;
@@ -716,8 +716,8 @@ function createTaskCardElement(task, nowDate) {
             <div class="subtasks-detail-list" style="margin-left: 32px; display: none; margin-bottom: 12px;">
                 ${task.subtasks.map(sub => `
                     <label class="subtask-item-label" style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin-bottom: 4px; color: ${sub.completed ? 'var(--text-muted)' : 'var(--text-secondary)'}">
-                        <input type="checkbox" class="subtask-checkbox" data-task-id="${task.id}" data-subtask-id="${sub.id}" ${sub.completed ? 'checked' : ''} style="accent-color: var(--accent-teal);">
-                        <span style="${sub.completed ? 'text-decoration: line-through;' : ''}">${sub.title}</span>
+                        <input type="checkbox" class="subtask-checkbox" data-task-id="${task.id}" data-subtask-id="${escapeHTML(sub.id)}" ${sub.completed ? 'checked' : ''} style="accent-color: var(--accent-teal);">
+                        <span style="${sub.completed ? 'text-decoration: line-through;' : ''}">${escapeHTML(sub.title)}</span>
                     </label>
                 `).join('')}
             </div>
@@ -725,21 +725,21 @@ function createTaskCardElement(task, nowDate) {
     }
 
     // Tags badge list mapping
-    const tagsHTML = task.tags.map(tag => `<span class="tag-badge">#${tag}</span>`).join('');
+    const tagsHTML = task.tags.map(tag => `<span class="tag-badge">#${escapeHTML(tag)}</span>`).join('');
 
     card.innerHTML = `
         <div class="task-card-header">
-            <span class="task-category-badge">${task.category}</span>
-            <span class="task-priority-badge ${task.priority}">${task.priority}</span>
+            <span class="task-category-badge">${escapeHTML(task.category)}</span>
+            <span class="task-priority-badge ${escapeHTML(task.priority)}">${escapeHTML(task.priority)}</span>
         </div>
         <div class="task-card-body">
             <div class="task-card-title-row">
                 <button class="checkbox-custom-btn task-checkbox" data-toggle-id="${task.id}" title="Toggle Complete">
                     <i data-lucide="check"></i>
                 </button>
-                <span class="task-title-text">${task.title}</span>
+                <span class="task-title-text">${escapeHTML(task.title)}</span>
             </div>
-            <p class="task-desc-text">${task.desc || 'No description provided.'}</p>
+            <p class="task-desc-text">${escapeHTML(task.desc) || 'No description provided.'}</p>
             ${subtasksHTML}
             <div class="task-tags-list">
                 ${tagsHTML}
@@ -923,7 +923,7 @@ async function deleteTask(id) {
         }
 
         render();
-        showToast(`"${task.title}" has been deleted.`, 'warning');
+        showToast(`"${escapeHTML(task.title)}" has been deleted.`, 'warning');
     }
 }
 
@@ -1006,7 +1006,7 @@ function addSubtaskInputField(value = '') {
     row.className = 'subtask-input-item';
     row.id = `subtask-input-row-${currentSubtaskCount}`;
     row.innerHTML = `
-        <input type="text" class="subtask-input-text-field" placeholder="Subtask detail name..." value="${value}" autocomplete="off">
+        <input type="text" class="subtask-input-text-field" placeholder="Subtask detail name..." value="${escapeHTML(value)}" autocomplete="off">
         <button type="button" class="btn-card-action delete" onclick="document.getElementById('subtask-input-row-${currentSubtaskCount}').remove();" title="Remove Item">
             <i data-lucide="trash-2"></i>
         </button>
@@ -1345,9 +1345,9 @@ function renderDayCellHTML(date, isOtherMonth, todayStr) {
     let pillsHTML = '<div class="calendar-task-pills">';
     dayTasks.forEach(task => {
         pillsHTML += `
-            <div class="calendar-task-pill ${task.priority} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}" title="${task.title}">
-                <span class="priority-dot ${task.priority}"></span>
-                <span>${task.title}</span>
+            <div class="calendar-task-pill ${escapeHTML(task.priority)} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}" title="${escapeHTML(task.title)}">
+                <span class="priority-dot ${escapeHTML(task.priority)}"></span>
+                <span>${escapeHTML(task.title)}</span>
             </div>
         `;
     });
@@ -1390,12 +1390,12 @@ function renderWeekView(container, titleEl) {
         let tasksHTML = '';
         dayTasks.forEach(task => {
             tasksHTML += `
-                <div class="calendar-weekly-card glass-panel ${task.priority} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                <div class="calendar-weekly-card glass-panel ${escapeHTML(task.priority)} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
                     <div class="weekly-card-header">
-                        <span class="task-category-badge">${task.category}</span>
-                        <span class="priority-dot ${task.priority}"></span>
+                        <span class="task-category-badge">${escapeHTML(task.category)}</span>
+                        <span class="priority-dot ${escapeHTML(task.priority)}"></span>
                     </div>
-                    <div class="weekly-card-title">${task.title}</div>
+                    <div class="weekly-card-title">${escapeHTML(task.title)}</div>
                 </div>
             `;
         });
@@ -1450,8 +1450,8 @@ function renderDayView(container, titleEl) {
                             <i data-lucide="check" style="${task.completed ? 'width:14px; height:14px; color:#fff;' : ''}"></i>
                         </button>
                         <div style="display:flex; flex-direction:column; gap:2px; margin-left:8px;">
-                            <span class="recent-task-title ${task.completed ? 'completed' : ''}" style="max-width:none; font-weight:600; text-decoration: ${task.completed ? 'line-through' : 'none'}; color: ${task.completed ? 'var(--text-muted)' : 'var(--text-primary)'};">${task.title}</span>
-                            <span style="font-size:11px; color:var(--text-muted);">${task.category} &bull; ${task.priority} Priority</span>
+                            <span class="recent-task-title ${task.completed ? 'completed' : ''}" style="max-width:none; font-weight:600; text-decoration: ${task.completed ? 'line-through' : 'none'}; color: ${task.completed ? 'var(--text-muted)' : 'var(--text-primary)'};">${escapeHTML(task.title)}</span>
+                            <span style="font-size:11px; color:var(--text-muted);">${escapeHTML(task.category)} &bull; ${escapeHTML(task.priority)} Priority</span>
                         </div>
                     </div>
                     <div class="recent-task-right">
@@ -1832,8 +1832,8 @@ function renderDocuments() {
                 month: 'short',
                 day: 'numeric'
             });
-            const preview = doc.content ? doc.content.substring(0, 45).replace(/[#*`]/g, '') + (doc.content.length > 45 ? '...' : '') : 'Empty document';
-            
+            const preview = doc.content ? escapeHTML(doc.content.substring(0, 45).replace(/[#*`]/g, '')) + (doc.content.length > 45 ? '...' : '') : 'Empty document';
+
             listHTML += `
                 <div class="doc-list-item ${isActive ? 'active' : ''}" data-doc-id="${doc.id}">
                     <div class="doc-item-title">${escapeHTML(doc.title || 'Untitled Document')}</div>
@@ -1897,7 +1897,7 @@ function renderDocuments() {
                         </button>
                     </div>
                 </div>
-                <textarea class="doc-textarea" id="doc-active-textarea" placeholder="Start writing here...">${activeDoc.content || ''}</textarea>
+                <textarea class="doc-textarea" id="doc-active-textarea" placeholder="Start writing here...">${escapeHTML(activeDoc.content)}</textarea>
             </div>
         `;
         
