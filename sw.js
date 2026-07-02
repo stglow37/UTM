@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aethertask-v4';
+const CACHE_NAME = 'aethertask-v5';
 const ASSETS = [
     './',
     './index.html',
@@ -80,20 +80,23 @@ self.addEventListener('push', (e) => {
             body: payload.body,
             icon: './icon-192.png',
             badge: './icon-192.png',
-            data: { taskId: payload.taskId || null }
+            data: { taskId: payload.taskId || null },
+            requireInteraction: true,
+            vibrate: [200, 100, 200]
         })
     );
 });
 
-// Notification Click - Focus an open tab or open a new one to the app
+// Notification Click - Only reuse a window that's already focused (actively
+// visible to the user); otherwise open fresh so Android routes the tap into
+// the installed PWA instead of resurfacing a backgrounded browser tab.
 self.addEventListener('notificationclick', (e) => {
     e.notification.close();
     e.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsList) => {
-            for (const client of clientsList) {
-                if (client.url.includes(self.registration.scope) && 'focus' in client) {
-                    return client.focus();
-                }
+            const focusedClient = clientsList.find(c => c.focused && c.url.includes(self.registration.scope));
+            if (focusedClient) {
+                return focusedClient.focus();
             }
             if (self.clients.openWindow) {
                 return self.clients.openWindow('./');

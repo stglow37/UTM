@@ -83,7 +83,7 @@ Deno.serve(async (_req) => {
             };
 
             try {
-                await webpush.sendNotification(pushSubscription, payload);
+                await webpush.sendNotification(pushSubscription, payload, { urgency: "high" });
                 sentCount++;
             } catch (err) {
                 console.error(`Push failed for subscription ${sub.id}:`, err);
