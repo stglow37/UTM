@@ -1587,6 +1587,12 @@ button {
 }
 .priority-option.high:has(input[type="radio"]:checked) .priority-label { color: var(--accent-rose); }
 
+.priority-option.reminder:has(input[type="radio"]:checked) {
+    border-color: var(--accent-violet);
+    box-shadow: 0 0 10px 0 var(--accent-violet-glow);
+}
+.priority-option.reminder:has(input[type="radio"]:checked) .priority-label { color: var(--accent-violet); }
+
 /* Subtask Creation list inside Modal */
 .checklist-section-header {
     display: flex;
@@ -1959,6 +1965,12 @@ button {
 .calendar-weekly-card.completed .weekly-card-title {
     text-decoration: line-through;
     color: var(--text-muted);
+}
+
+.weekly-card-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
 }
 
 /* Daily View Styling */

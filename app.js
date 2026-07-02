@@ -92,6 +92,55 @@ const defaultTasks = [
 // Pre-seeded standard categories
 const presetCategories = ['Work', 'Personal', 'Shopping', 'Wellness'];
 
+// ==========================================
+// DUE DATE / TIME HELPERS
+// ==========================================
+
+// Computes the precise UTC instant a task is due, from its local dueDate (+
+// dueTime for 'exact' mode). Parsed without a timezone suffix so the browser's
+// local timezone is used, matching what the user actually meant when picking it.
+function computeDueAt(dueDate, dueTime, mode) {
+    if (!dueDate) return null;
+    if (mode === 'exact' && dueTime) {
+        return new Date(`${dueDate}T${dueTime}:00`).toISOString();
+    }
+    return new Date(`${dueDate}T00:00:00`).toISOString();
+}
+
+// Overdue check, mode-aware: 'exact' tasks are overdue once their precise due
+// instant passes; 'daily'/all-day tasks stay "due today" until the day ends.
+function isTaskOverdue(task, now = new Date()) {
+    if (task.completed || !task.dueDate) return false;
+
+    if (task.reminder_mode === 'exact' && task.due_time) {
+        const dueInstant = task.due_at ? new Date(task.due_at) : new Date(`${task.dueDate}T${task.due_time}:00`);
+        return dueInstant.getTime() < now.getTime();
+    }
+
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    // Parsed without a timezone suffix (local time), matching computeDueAt -
+    // parsing as a bare 'YYYY-MM-DD' would be UTC midnight, which silently
+    // shifts to the previous local day for negative UTC-offset users.
+    const taskDue = new Date(`${task.dueDate}T00:00:00`);
+    return taskDue < dayStart;
+}
+
+// Formats the time portion for display (e.g. "3:30 PM"), only for 'exact' mode tasks.
+function formatTaskTime(task) {
+    if (task.reminder_mode !== 'exact' || !task.due_time) return '';
+    const [hours, minutes] = task.due_time.split(':').map(Number);
+    const d = new Date();
+    d.setHours(hours, minutes, 0, 0);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+// Falls back to computing due_at on the fly for tasks that predate this field
+// (e.g. local data saved before this feature shipped), so sorting stays correct.
+function getEffectiveDueAt(task) {
+    return task.due_at || computeDueAt(task.dueDate, task.due_time, task.reminder_mode);
+}
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
@@ -150,7 +199,14 @@ async function loadTasks() {
                 state.tasks = data;
             } else {
                 // Seed database if empty
-                const seeded = defaultTasks.map(t => ({ ...t, user_id: getUserId() }));
+                const seeded = defaultTasks.map(t => ({
+                    ...t,
+                    reminder_mode: 'daily',
+                    due_time: null,
+                    reminder_lead_minutes: 0,
+                    due_at: computeDueAt(t.dueDate, null, 'daily'),
+                    user_id: getUserId()
+                }));
                 const { error: seedError } = await state.supabase.from('tasks').insert(seeded);
                 if (seedError) throw seedError;
                 state.tasks = [...seeded];
@@ -171,7 +227,13 @@ function loadLocalTasks() {
     if (local) {
         state.tasks = JSON.parse(local);
     } else {
-        state.tasks = [...defaultTasks];
+        state.tasks = defaultTasks.map(t => ({
+            ...t,
+            reminder_mode: 'daily',
+            due_time: null,
+            reminder_lead_minutes: 0,
+            due_at: computeDueAt(t.dueDate, null, 'daily')
+        }));
         saveTasks();
     }
 }
@@ -212,6 +274,11 @@ function initEventListeners() {
 
     // Subtask Checklist addition in Modal
     document.getElementById('btn-add-subtask-input').addEventListener('click', () => addSubtaskInputField());
+
+    // Reminder Mode Toggle (All Day / Specific Time)
+    document.querySelectorAll('input[name="reminder-mode"]').forEach(radio => {
+        radio.addEventListener('change', syncExactTimeRowVisibility);
+    });
 
     // Task Form Submission
     document.getElementById('task-form').addEventListener('submit', handleTaskFormSubmit);
@@ -373,7 +440,6 @@ function render() {
 // Compute Statistics Helper
 function getStats() {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
 
     let stats = {
         total: state.tasks.length,
@@ -387,14 +453,9 @@ function getStats() {
             stats.completed++;
         } else {
             stats.pending++;
-            
-            // Check overdue
-            if (task.dueDate) {
-                const taskDue = new Date(task.dueDate);
-                taskDue.setHours(0, 0, 0, 0);
-                if (taskDue < now) {
-                    stats.overdue++;
-                }
+
+            if (isTaskOverdue(task, now)) {
+                stats.overdue++;
             }
         }
     });
@@ -459,16 +520,17 @@ function renderDashboard() {
     // Render Urgent & Upcoming tasks (Pending sorted by due date)
     const urgentList = document.getElementById('urgent-tasks-list');
     urgentList.innerHTML = '';
-    
+
     const now = new Date();
-    now.setHours(0,0,0,0);
 
     const pendingTasks = state.tasks
         .filter(t => !t.completed)
         .sort((a, b) => {
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate) - new Date(b.dueDate);
+            const aDueAt = getEffectiveDueAt(a);
+            const bDueAt = getEffectiveDueAt(b);
+            if (!aDueAt) return 1;
+            if (!bDueAt) return -1;
+            return new Date(aDueAt) - new Date(bDueAt);
         });
 
     const displayUrgent = pendingTasks.slice(0, 3); // top 3 tasks
@@ -481,11 +543,13 @@ function renderDashboard() {
         `;
     } else {
         displayUrgent.forEach(task => {
-            const isOverdue = task.dueDate && new Date(task.dueDate) < now;
+            const isOverdue = isTaskOverdue(task, now);
             let dueText = 'No due date';
             if (task.dueDate) {
                 const dateObj = new Date(task.dueDate);
                 dueText = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const timeText = formatTaskTime(task);
+                if (timeText) dueText += `, ${timeText}`;
             }
 
             const item = document.createElement('div');
@@ -608,19 +672,13 @@ function renderTaskList() {
     grid.innerHTML = '';
 
     const now = new Date();
-    now.setHours(0,0,0,0);
 
     // Apply filtering steps
     let filteredTasks = state.tasks.filter(task => {
         // 1. Status Filter
         if (state.statusFilter === 'active' && task.completed) return false;
         if (state.statusFilter === 'completed' && !task.completed) return false;
-        if (state.statusFilter === 'overdue') {
-            if (task.completed || !task.dueDate) return false;
-            const taskDue = new Date(task.dueDate);
-            taskDue.setHours(0, 0, 0, 0);
-            if (taskDue >= now) return false;
-        }
+        if (state.statusFilter === 'overdue' && !isTaskOverdue(task, now)) return false;
 
         // 2. Category Dropdown Filter
         if (state.categoryFilter !== 'all' && task.category !== state.categoryFilter) return false;
@@ -643,9 +701,11 @@ function renderTaskList() {
     // Apply Sorting steps
     filteredTasks.sort((a, b) => {
         if (state.sortBy === 'due-date') {
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate) - new Date(b.dueDate);
+            const aDueAt = getEffectiveDueAt(a);
+            const bDueAt = getEffectiveDueAt(b);
+            if (!aDueAt) return 1;
+            if (!bDueAt) return -1;
+            return new Date(aDueAt) - new Date(bDueAt);
         }
         
         if (state.sortBy === 'title') {
@@ -689,12 +749,14 @@ function renderTaskList() {
 
 // Generate the task HTML structure card
 function createTaskCardElement(task, nowDate) {
-    const isOverdue = !task.completed && task.dueDate && new Date(task.dueDate) < nowDate;
-    
+    const isOverdue = isTaskOverdue(task, nowDate);
+
     let dueText = 'No due date';
     if (task.dueDate) {
         const dateObj = new Date(task.dueDate);
         dueText = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeText = formatTaskTime(task);
+        if (timeText) dueText += `, ${timeText}`;
     }
 
     const card = document.createElement('div');
@@ -961,6 +1023,15 @@ function openTaskModal(taskToEdit = null) {
 
         document.getElementById('task-tags').value = taskToEdit.tags.join(', ');
 
+        const modeToCheck = taskToEdit.reminder_mode || 'daily';
+        document.querySelectorAll('input[name="reminder-mode"]').forEach(radio => {
+            if (radio.value === modeToCheck) {
+                radio.checked = true;
+            }
+        });
+        document.getElementById('task-due-time').value = taskToEdit.due_time || '';
+        document.getElementById('task-reminder-lead').value = String(taskToEdit.reminder_lead_minutes || 0);
+
         // Populate edit checklist
         if (taskToEdit.subtasks && taskToEdit.subtasks.length > 0) {
             taskToEdit.subtasks.forEach(sub => {
@@ -984,6 +1055,15 @@ function openTaskModal(taskToEdit = null) {
                 }
             });
             document.getElementById('task-tags').value = taskToEdit.tags ? taskToEdit.tags.join(', ') : '';
+
+            const modeToCheck = taskToEdit.reminder_mode || 'daily';
+            document.querySelectorAll('input[name="reminder-mode"]').forEach(radio => {
+                if (radio.value === modeToCheck) {
+                    radio.checked = true;
+                }
+            });
+            document.getElementById('task-due-time').value = taskToEdit.due_time || '';
+            document.getElementById('task-reminder-lead').value = String(taskToEdit.reminder_lead_minutes || 0);
         } else {
             // default today's date for ease
             const today = new Date().toISOString().split('T')[0];
@@ -991,9 +1071,16 @@ function openTaskModal(taskToEdit = null) {
         }
     }
 
+    syncExactTimeRowVisibility();
     modal.classList.add('active');
     document.getElementById('task-title').focus();
     lucide.createIcons();
+}
+
+function syncExactTimeRowVisibility() {
+    const checkedMode = document.querySelector('input[name="reminder-mode"]:checked');
+    const isExact = checkedMode && checkedMode.value === 'exact';
+    document.getElementById('exact-time-row').style.display = isExact ? 'grid' : 'none';
 }
 
 function closeTaskModal() {
@@ -1030,7 +1117,12 @@ async function handleTaskFormSubmit(e) {
     const category = document.getElementById('task-category-select').value;
     const dueDate = document.getElementById('task-due-date').value;
     const priority = document.querySelector('input[name="priority"]:checked').value;
-    
+
+    const reminder_mode = document.querySelector('input[name="reminder-mode"]:checked').value;
+    const due_time = reminder_mode === 'exact' ? document.getElementById('task-due-time').value : null;
+    const reminder_lead_minutes = reminder_mode === 'exact' ? Number(document.getElementById('task-reminder-lead').value) : 0;
+    const due_at = computeDueAt(dueDate, due_time, reminder_mode);
+
     // Parse tag lists
     const rawTags = document.getElementById('task-tags').value;
     const tags = rawTags.split(',')
@@ -1070,11 +1162,17 @@ async function handleTaskFormSubmit(e) {
                 dueDate,
                 priority,
                 tags,
-                subtasks: newSubtasks
+                subtasks: newSubtasks,
+                reminder_mode,
+                due_time,
+                reminder_lead_minutes,
+                due_at
             };
 
-            // Due date changed - allow the reminder to fire again for the new date
-            if (state.tasks[taskIndex].dueDate !== dueDate) {
+            // Due date/time/mode/lead changed - allow the reminder to fire again
+            const prevTask = state.tasks[taskIndex];
+            if (prevTask.dueDate !== dueDate || prevTask.due_time !== due_time ||
+                prevTask.reminder_mode !== reminder_mode || prevTask.reminder_lead_minutes !== reminder_lead_minutes) {
                 updatedFields.reminder_sent_at = null;
             }
 
@@ -1124,6 +1222,10 @@ async function handleTaskFormSubmit(e) {
             tags,
             completed: false,
             subtasks: newSubtasks,
+            reminder_mode,
+            due_time,
+            reminder_lead_minutes,
+            due_at,
             user_id: getUserId()
         };
         state.tasks.push(newTask);
@@ -1157,17 +1259,22 @@ async function handleQuickAddSubmit(e) {
 
     const category = document.getElementById('quick-add-category').value;
     const priority = document.getElementById('quick-add-priority').value;
+    const dueDate = new Date().toISOString().split('T')[0]; // Default today
 
     const newTask = {
         id: `task-${Date.now()}`,
         title,
         desc: '',
         category,
-        dueDate: new Date().toISOString().split('T')[0], // Default today
+        dueDate,
         priority,
         tags: [],
         completed: false,
         subtasks: [],
+        reminder_mode: 'daily',
+        due_time: null,
+        reminder_lead_minutes: 0,
+        due_at: computeDueAt(dueDate, null, 'daily'),
         user_id: getUserId()
     };
 
@@ -1397,6 +1504,7 @@ function renderWeekView(container, titleEl) {
 
         let tasksHTML = '';
         dayTasks.forEach(task => {
+            const taskTime = formatTaskTime(task);
             tasksHTML += `
                 <div class="calendar-weekly-card glass-panel ${escapeHTML(task.priority)} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
                     <div class="weekly-card-header">
@@ -1404,6 +1512,7 @@ function renderWeekView(container, titleEl) {
                         <span class="priority-dot ${escapeHTML(task.priority)}"></span>
                     </div>
                     <div class="weekly-card-title">${escapeHTML(task.title)}</div>
+                    ${taskTime ? `<div class="weekly-card-time">${taskTime}</div>` : ''}
                 </div>
             `;
         });
@@ -1451,6 +1560,7 @@ function renderDayView(container, titleEl) {
         `;
     } else {
         dayTasks.forEach(task => {
+            const taskTime = formatTaskTime(task);
             tasksHTML += `
                 <div class="recent-task-item" style="padding:16px; margin-bottom:10px;">
                     <div class="recent-task-left">
@@ -1459,7 +1569,7 @@ function renderDayView(container, titleEl) {
                         </button>
                         <div style="display:flex; flex-direction:column; gap:2px; margin-left:8px;">
                             <span class="recent-task-title ${task.completed ? 'completed' : ''}" style="max-width:none; font-weight:600; text-decoration: ${task.completed ? 'line-through' : 'none'}; color: ${task.completed ? 'var(--text-muted)' : 'var(--text-primary)'};">${escapeHTML(task.title)}</span>
-                            <span style="font-size:11px; color:var(--text-muted);">${escapeHTML(task.category)} &bull; ${escapeHTML(task.priority)} Priority</span>
+                            <span style="font-size:11px; color:var(--text-muted);">${escapeHTML(task.category)} &bull; ${escapeHTML(task.priority)} Priority${taskTime ? ` &bull; ${taskTime}` : ''}</span>
                         </div>
                     </div>
                     <div class="recent-task-right">
